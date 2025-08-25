@@ -1,0 +1,418 @@
+<?php
+
+namespace ProcessWire;
+
+class WesanoxHelperFields extends WireData implements Module
+{
+    public static function getModuleInfo()
+    {
+        return array(
+            'title' => 'wesanox Helper Fields',
+            'summary' => 'A helper module to create simple at fast field inside of other modules, templates or matrix items.',
+            'version' => '0.1.1',
+            'author' => 'Frittenfritze',
+            'href' => 'https://wesanox.de',
+            'icon' => 'cogs',
+            'singular' => true,
+            'autoload' => true,
+            'requires' => array(
+                'ProcessWire>=3.0.210',
+                'PHP>=8.0.0',
+            ),
+        );
+    }
+
+    /**
+     * @var array|string[]
+     */
+    protected array $suffixes = [
+        '_name',
+        '_label',
+        '_head',
+        '_fields',
+        '_sort',
+        '_summary',
+        '_icon',
+        '_preview',
+        '_notes',
+        '_collapsed'
+    ];
+
+    /**
+     * Retrieves the count of keys in the given matrix whose names match a specific pattern.
+     *
+     * @param mixed $matrix The matrix identifier used to fetch data from the fields.
+     * @return int The count of keys matching the pattern 'matrix\d+_sort'.
+     */
+    public function getMatrixKey($matrix): int
+    {
+        $keys = array_keys($this->fields->get($matrix)->data);
+
+        $items = 0;
+
+        foreach ($keys as $key) {
+            if (preg_match('/^matrix\d+_sort$/', $key)) {
+                $items++;
+            }
+        }
+
+        return $items;
+    }
+
+    /***
+     * @param array $fields_array
+     * @param string $matrix
+     * @param array $matrix_items
+     * @return void
+     */
+    public function deleteFields(array $fields_array, string $matrix = '', array $matrix_items = []): void
+    {
+        $this->deleteMatrixTypes($fields_array, $matrix, $matrix_items);
+
+        $fields_array = array_reverse($fields_array);
+
+        foreach  ($fields_array as $field) {
+            $field = $this->fields->get($field['name']);
+
+            if ($field && $field->getFieldgroups()->count == 0) {
+                $this->fields->delete($field);
+            }
+        }
+    }
+
+    /**
+     * Delete an item in a Matrix Field
+     *
+     * @param \ProcessWire\Fields $fields
+     * @param string $matrix
+     * @param array $type_names
+     * @param array $content_fields
+     * @return void
+     */
+    private function deleteMatrixTypes(array $fields_array, string $matrix, array $type_names) : void
+    {
+        if( $matrix != '') {
+            $f = $this->fields->get($matrix);
+
+            if(!$f) return;
+
+            $matrix_template = $f->type->getMatrixTemplate($f);
+
+            $drop_fields = [];
+            $drop_field_ids = [];
+            $keys_delete = [];
+            $remaining_ids = [];
+
+            $changed = false;
+            $changed_fieldgroup = false;
+
+            foreach ($fields_array as $content_field) {
+                $cf = $this->fields->get($content_field['name']);
+
+                if($cf) {
+                    $drop_fields[$cf->name] = $cf;
+                    $drop_field_ids[] = $cf->id;
+                }
+            }
+
+            foreach($f->data as $key => $data) {
+                if (preg_match('/^matrix(\d+)_name$/', $key, $m) && in_array($data, $type_names, true)) {
+                    $keys_delete[] = $m[1];
+                }
+            }
+
+            if(!$keys_delete) return;
+
+            foreach ($keys_delete as $key) {
+                foreach ($this->suffixes as $suffix) {
+                    $f->remove("matrix{$key}" . $suffix);
+                }
+            }
+
+            $this->fields->save($f);
+
+            foreach ($f->data as $key => $data) {
+                if (preg_match('/^matrix\d+_fields$/', $key) && is_array($data)) {
+                    $new = array_values(array_diff($data, $drop_field_ids));
+
+                    if ($new !== $data) {
+                        $f->set($key, $new);
+                        $changed = true;
+                    }
+                }
+            }
+
+            if ($changed) $this->fields->save($f);
+
+            if (is_array($f->repeaterFields) && $drop_field_ids) {
+                $new_repeater_field = array_values(array_diff($f->repeaterFields, $drop_field_ids));
+
+                if ($new_repeater_field !== $f->repeaterFields) {
+                    $f->repeaterFields = $new_repeater_field;
+
+                    $this->fields->save($f);
+                }
+            }
+
+            foreach ($f->data as $key => $data) {
+                if (preg_match('/^matrix\d+_fields$/', $key) && is_array($data)) {
+                    foreach ($data as $id) $remaining_ids[$id] = true;
+                }
+            }
+
+            foreach ($drop_fields as $fld) {
+                $id = $fld->id;
+
+                if (!isset($remaining_ids[$id])) {
+                    $matrix_template->fieldgroup->remove($fld);
+                    $changed_fieldgroup = true;
+                }
+            }
+
+            if ($changed_fieldgroup) {
+                $matrix_template->fieldgroup->save();
+                $matrix_template->save();
+            }
+        }
+    }
+
+    /**
+     * @param $fields
+     * @param $field_array
+     * @return void
+     * @throws WirePermissionException
+     */
+    public function createFields($field_array): void
+    {
+        if( !$this->fields->get($field_array['name']) )
+        {
+            $this->setDefaults($field_array);
+
+            $f = $this->fields->get($field_array['name']);
+
+            if ( $field_array['type'] === 'Text' || $field_array['type'] === 'Textarea' || $field_array['type'] === 'Checkbox') {
+                $this->createGeneralField($f, $field_array);
+            }
+
+            if ( $field_array['type'] === 'Options' ) {
+                $this->createOptionField($f, $field_array);
+            }
+
+            if ( $field_array['type'] === 'DynamicOptions' ) {
+                $this->createDynamicOptionField($f, $field_array);
+            }
+
+            if( $field_array['type'] === 'Page' ) {
+                $this->createPageField($f, $field_array);
+            }
+
+            if ( $field_array['type'] === 'CroppableImage3' ) {
+                $this->createImageField($f, $field_array);
+            }
+
+            if( $field_array['type'] === 'File' ) {
+                $this->createFileField($f, $field_array);
+            }
+
+            if ( $field_array['type'] === 'Repeater' ) {
+                $this->createRepeaterField($f, $field_array);
+            }
+
+            if( $field_array['type'] === 'RepeaterMatrix' ) {
+                $this->createMatrixField($f, $field_array);
+            }
+
+            $f->save();
+        }
+    }
+
+    /**
+     * @param $field_array
+     * @return void
+     * @throws WirePermissionException
+     */
+    private function setDefaults($field_array): void
+    {
+        $f = new Field;
+
+        $f->type = $this->modules->get('Fieldtype' . $field_array['type']);
+        $f->name = $field_array['name'];
+        $f->label = $this->_($field_array['label']);
+        $f->tags = $field_array['tags'];
+        $f->icon = $field_array['icon'] ?? null;
+        $f->columnWidth = $field_array['width'] ?? 100;
+        $f->placeholder = $field_array['placeholder'] ?? '';
+
+        $f->save();
+    }
+
+    /**
+     * @param $f
+     * @param $field_array
+     * @return void
+     */
+    private function createGeneralField($f, $field_array): void
+    {
+        if( $field_array['formatter'] !== null ) $f->textformatters = [ 0 => $field_array['formatter']];
+        if( $field_array['inputfieldClass'] !== null ) $f->inputfieldClass = $field_array['inputfieldClass'];
+    }
+
+    /**
+     * @param $f
+     * @param $field_array
+     * @return void
+     */
+    private function createOptionField($f, $field_array): void
+    {
+        $manager = new SelectableOptionManager();
+        $options = $field_array['options'];
+        $manager->setOptionsString($f, $options, false);
+    }
+
+    /**
+     * @param $f
+     * @param $field_array
+     * @return void
+     */
+    private function createDynamicOptionField($f, $field_array): void
+    {
+        $f->inputflied_class = $field_array['inputfield_class'];
+    }
+
+    /**
+     * @param $f
+     * @param $field_array
+     * @return void
+     */
+    private function createPageField($f, $field_array): void
+    {
+        $f->derefAsPage = $field_array['derefAsPage'];
+        $f->inputfield = $field_array['inputfield'];
+        $f->parent_id = $field_array['parent_id'];
+        $f->labelFieldName = $field_array['labelFieldName'];
+        $f->collapsed = $field_array['collapsed'];
+    }
+
+    /**
+     * @param $f
+     * @param $field_array
+     * @return void
+     */
+    private function createImageField($f, $field_array): void
+    {
+        $f->maxFiles = $field_array['maxFiles'];
+        $f->defaultValuePage = $field_array['defaultValuePage'];
+        $f->gridMode = $field_array['gridMode'];
+        $f->clientQuality = $field_array['clientQuality'];
+        $f->extensions = $field_array['extensions'];
+        $f->inputfieldClass = $field_array['inputfieldClass'];
+        $f->cropSetting = $field_array['cropSetting'];
+    }
+
+    /**
+     * @param $f
+     * @param $field_array
+     * @return void
+     */
+    private function createFileField($f, $field_array): void
+    {
+        $f->fileExtensions = $field_array['extensions'];
+        $f->maxFiles = $field_array['maxFiles'];
+    }
+
+    /**
+     * @param $f
+     * @param $fields
+     * @param $field_array
+     * @return void
+     */
+    private function createRepeaterField($f, $field_array): void
+    {
+        $fields_repeater = [];
+
+        foreach( $field_array['fields'] as $field_name ) {
+            $fields_repeater[] = $this->fields->get($field_name)->id;
+        }
+
+        $f->addType = 1;
+        $f->repeaterFields = $fields_repeater;
+
+        $this->setRepeaterTemplateFields($field_array);
+    }
+
+    /**
+     * @param $fields
+     * @param $field_array
+     * @return void
+     */
+    private function setRepeaterTemplateFields($field_array): void
+    {
+        $repeater = $this->fields->get($field_array['name']);
+
+        $repeater_template = $repeater->type->getRepeaterTemplate($repeater);
+
+        foreach( $field_array['fields'] as $field_name ) {
+            $repeater_template->fieldgroup->add($field_name);
+        }
+
+        $repeater_template->fieldgroup->save();
+
+        $repeater->save();
+    }
+
+    /**
+     * @param $f
+     * @param $fields
+     * @param $field_array
+     * @return void
+     */
+    private function createMatrixField($f, $field_array): void
+    {
+        $fields_matrix = [];
+
+        foreach( $field_array['fields'] as $field_name ) {
+            $fields_matrix[] = $this->fields->get($field_name)->id;
+        }
+
+        $f->addType = 1;
+        $f->matrixFields = $fields_matrix;
+
+        foreach( $field_array['matrix_items'] as $key => $matrix_item ) {
+            $fields_matrix = [];
+
+            foreach( $matrix_item['fields'] as $field_items ) {
+                $fields_matrix[] = $this->fields->get($field_items)->id;
+            }
+
+            $f->setArray(["matrix{$key}_name"   => $matrix_item['name'],
+                "matrix{$key}_label"  => $matrix_item['label'],
+                "matrix{$key}_head"   => '{matrix_label} [• {matrix_summary}]',
+                "matrix{$key}_fields" => $fields_matrix,
+                "matrix{$key}_sort"   => $key,
+            ]);
+
+            $f->save();
+        }
+
+        $this->setMatrixTemplateFields($field_array);
+    }
+
+    /**
+     * @param $field_array
+     * @return void
+     */
+    private function setMatrixTemplateFields($field_array): void
+    {
+        $repeater = $this->fields->get($field_array['name']);
+
+        $repeater_template = $repeater->type->getMatrixTemplate($repeater);
+
+        foreach( $field_array['fields'] as $field_name ) {
+            $repeater_template->fieldgroup->add($field_name);
+        }
+
+        $repeater_template->fieldgroup->save();
+
+        $repeater->save();
+    }
+}
