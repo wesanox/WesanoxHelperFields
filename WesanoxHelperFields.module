@@ -187,35 +187,41 @@ class WesanoxHelperFields extends WireData implements Module
     {
         if( !$this->fields->get($field_array['name']) )
         {
+
             $this->setDefaults($field_array);
 
             $f = $this->fields->get($field_array['name']);
 
-            if ( $field_array['type'] === 'Text' || $field_array['type'] === 'Textarea' || $field_array['type'] === 'Checkbox') {
+            if ($field_array['type'] === 'Text' || $field_array['type'] === 'Textarea' || $field_array['type'] === 'Checkbox') {
                 $this->createGeneralField($f, $field_array);
             }
 
-            if ( $field_array['type'] === 'Options' ) {
+            if ($field_array['type'] === 'Options') {
                 $this->createOptionField($f, $field_array);
             }
 
-            if ( $field_array['type'] === 'DynamicOptions' ) {
+            if ($field_array['type'] === 'DynamicOptions') {
                 $this->createDynamicOptionField($f, $field_array);
             }
 
-            if( $field_array['type'] === 'Page' ) {
+            if ($field_array['type'] === 'Page') {
                 $this->createPageField($f, $field_array);
             }
 
-            if ( $field_array['type'] === 'CroppableImage3' ) {
+            if ($field_array['type'] === 'CroppableImage3') {
                 $this->createImageField($f, $field_array);
             }
 
-            if( $field_array['type'] === 'File' ) {
+            if ($field_array['type'] === 'File') {
                 $this->createFileField($f, $field_array);
             }
 
-            if ( $field_array['type'] === 'Repeater' ) {
+            $f->save();
+
+            /**
+             * Repeater and Matrix are saved in their functions
+             */
+            if ($field_array['type'] === 'Repeater') {
                 $this->createRepeaterField($f, $field_array);
             }
 
@@ -223,7 +229,6 @@ class WesanoxHelperFields extends WireData implements Module
                 $this->createMatrixField($f, $field_array);
             }
 
-            $f->save();
         }
     }
 
@@ -236,7 +241,7 @@ class WesanoxHelperFields extends WireData implements Module
      */
     private function setDefaults(array $field_array): void
     {
-        $f = new Field;
+        $f = new Field();
 
         $f->type = $this->modules->get('Fieldtype' . $field_array['type']);
         $f->name = $field_array['name'];
@@ -325,7 +330,7 @@ class WesanoxHelperFields extends WireData implements Module
      */
     private function createFileField($f, array $field_array): void
     {
-        $f->fileExtensions = $field_array['extensions'];
+        $f->extensions = $field_array['extensions'];
         $f->maxFiles = $field_array['maxFiles'];
     }
 
@@ -345,6 +350,8 @@ class WesanoxHelperFields extends WireData implements Module
 
         $f->addType = 1;
         $f->repeaterFields = $fields_repeater;
+
+        $f->save();
 
         $this->setRepeaterTemplateFields($field_array);
     }
@@ -377,31 +384,36 @@ class WesanoxHelperFields extends WireData implements Module
      */
     private function createMatrixField($f, array $field_array): void
     {
-        $fields_matrix = [];
+        $matrix_field_ids = [];
+        $i = 1;
 
         foreach( $field_array['fields'] as $field_name ) {
-            $fields_matrix[] = $this->fields->get($field_name)->id;
+            $matrix_field_ids[] = $this->fields->get($field_name)->id;
         }
 
         $f->addType = 1;
-        $f->matrixFields = $fields_matrix;
+        $f->repeaterFields = $matrix_field_ids;
 
-        foreach( $field_array['matrix_items'] as $key => $matrix_item ) {
-            $fields_matrix = [];
+        foreach( $field_array['matrix_items'] as $matrix_item ) {
+            $matrix_item_field_ids = [];
+
 
             foreach( $matrix_item['fields'] as $field_items ) {
-                $fields_matrix[] = $this->fields->get($field_items)->id;
+                $matrix_item_field_ids[] = $this->fields->get($field_items)->id;
             }
 
-            $f->setArray(["matrix{$key}_name"   => $matrix_item['name'],
-                "matrix{$key}_label"  => $matrix_item['label'],
-                "matrix{$key}_head"   => '{matrix_label} [• {matrix_summary}]',
-                "matrix{$key}_fields" => $fields_matrix,
-                "matrix{$key}_sort"   => $key,
+            $f->setArray([
+                "matrix{$i}_name"   => $matrix_item['name'],
+                "matrix{$i}_label"  => $matrix_item['label'],
+                "matrix{$i}_head"   => '{matrix_label} [• {matrix_summary}]',
+                "matrix{$i}_fields" => $matrix_item_field_ids,
+                "matrix{$i}_sort"   => $i,
             ]);
 
-            $f->save();
+            $i++;
         }
+
+        $f->save();
 
         $this->setMatrixTemplateFields($field_array);
     }
@@ -417,11 +429,13 @@ class WesanoxHelperFields extends WireData implements Module
 
         $repeater_template = $repeater->type->getMatrixTemplate($repeater);
 
-        foreach( $field_array['fields'] as $field_name ) {
+        foreach($field_array['fields'] as $field_name) {
             $repeater_template->fieldgroup->add($field_name);
         }
 
         $repeater_template->fieldgroup->save();
+
+        $repeater_template->save();
 
         $repeater->save();
     }
