@@ -59,7 +59,7 @@ class WesanoxHelperFields extends WireData implements Module
         return $items;
     }
 
-    /***
+    /**
      * @param array $fields_array
      * @param string $matrix
      * @param array $matrix_items
