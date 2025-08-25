@@ -44,7 +44,7 @@ class WesanoxHelperFields extends WireData implements Module
      * @param mixed $matrix The matrix identifier used to fetch data from the fields.
      * @return int The count of keys matching the pattern 'matrix\d+_sort'.
      */
-    public function getMatrixKey($matrix): int
+    public function getMatrixKey(mixed $matrix): int
     {
         $keys = array_keys($this->fields->get($matrix)->data);
 
@@ -177,12 +177,11 @@ class WesanoxHelperFields extends WireData implements Module
     }
 
     /**
-     * @param $fields
-     * @param $field_array
+     * @param array $field_array
      * @return void
      * @throws WirePermissionException
      */
-    public function createFields($field_array): void
+    public function createFields(array $field_array): void
     {
         if( !$this->fields->get($field_array['name']) )
         {
@@ -227,11 +226,11 @@ class WesanoxHelperFields extends WireData implements Module
     }
 
     /**
-     * @param $field_array
+     * @param array $field_array
      * @return void
      * @throws WirePermissionException
      */
-    private function setDefaults($field_array): void
+    private function setDefaults(array $field_array): void
     {
         $f = new Field;
 
@@ -248,10 +247,10 @@ class WesanoxHelperFields extends WireData implements Module
 
     /**
      * @param $f
-     * @param $field_array
+     * @param array $field_array
      * @return void
      */
-    private function createGeneralField($f, $field_array): void
+    private function createGeneralField($f, array $field_array): void
     {
         if( $field_array['formatter'] !== null ) $f->textformatters = [ 0 => $field_array['formatter']];
         if( $field_array['inputfieldClass'] !== null ) $f->inputfieldClass = $field_array['inputfieldClass'];
@@ -259,10 +258,10 @@ class WesanoxHelperFields extends WireData implements Module
 
     /**
      * @param $f
-     * @param $field_array
+     * @param array $field_array
      * @return void
      */
-    private function createOptionField($f, $field_array): void
+    private function createOptionField($f, array $field_array): void
     {
         $manager = new SelectableOptionManager();
         $options = $field_array['options'];
@@ -271,20 +270,20 @@ class WesanoxHelperFields extends WireData implements Module
 
     /**
      * @param $f
-     * @param $field_array
+     * @param array $field_array
      * @return void
      */
-    private function createDynamicOptionField($f, $field_array): void
+    private function createDynamicOptionField($f, array $field_array): void
     {
         $f->inputflied_class = $field_array['inputfield_class'];
     }
 
     /**
      * @param $f
-     * @param $field_array
+     * @param array $field_array
      * @return void
      */
-    private function createPageField($f, $field_array): void
+    private function createPageField($f, array $field_array): void
     {
         $f->derefAsPage = $field_array['derefAsPage'];
         $f->inputfield = $field_array['inputfield'];
@@ -295,10 +294,10 @@ class WesanoxHelperFields extends WireData implements Module
 
     /**
      * @param $f
-     * @param $field_array
+     * @param array $field_array
      * @return void
      */
-    private function createImageField($f, $field_array): void
+    private function createImageField($f, array $field_array): void
     {
         $f->maxFiles = $field_array['maxFiles'];
         $f->defaultValuePage = $field_array['defaultValuePage'];
@@ -311,10 +310,10 @@ class WesanoxHelperFields extends WireData implements Module
 
     /**
      * @param $f
-     * @param $field_array
+     * @param array $field_array
      * @return void
      */
-    private function createFileField($f, $field_array): void
+    private function createFileField($f, array $field_array): void
     {
         $f->fileExtensions = $field_array['extensions'];
         $f->maxFiles = $field_array['maxFiles'];
@@ -322,11 +321,10 @@ class WesanoxHelperFields extends WireData implements Module
 
     /**
      * @param $f
-     * @param $fields
-     * @param $field_array
+     * @param array $field_array
      * @return void
      */
-    private function createRepeaterField($f, $field_array): void
+    private function createRepeaterField($f, array $field_array): void
     {
         $fields_repeater = [];
 
@@ -341,11 +339,10 @@ class WesanoxHelperFields extends WireData implements Module
     }
 
     /**
-     * @param $fields
-     * @param $field_array
+     * @param array $field_array
      * @return void
      */
-    private function setRepeaterTemplateFields($field_array): void
+    private function setRepeaterTemplateFields(array $field_array): void
     {
         $repeater = $this->fields->get($field_array['name']);
 
@@ -362,11 +359,10 @@ class WesanoxHelperFields extends WireData implements Module
 
     /**
      * @param $f
-     * @param $fields
-     * @param $field_array
+     * @param array $field_array
      * @return void
      */
-    private function createMatrixField($f, $field_array): void
+    private function createMatrixField($f, array $field_array): void
     {
         $fields_matrix = [];
 
@@ -398,10 +394,10 @@ class WesanoxHelperFields extends WireData implements Module
     }
 
     /**
-     * @param $field_array
+     * @param array $field_array
      * @return void
      */
-    private function setMatrixTemplateFields($field_array): void
+    private function setMatrixTemplateFields(array $field_array): void
     {
         $repeater = $this->fields->get($field_array['name']);
 
