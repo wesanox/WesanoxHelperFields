@@ -9,7 +9,7 @@ class WesanoxHelperFields extends WireData implements Module
         return array(
             'title' => 'wesanox Helper Fields',
             'summary' => 'A helper module to create simple at fast field inside of other modules, templates or matrix items.',
-            'version' => '0.1.1',
+            'version' => '0.1.2',
             'author' => 'Frittenfritze',
             'href' => 'https://wesanox.de',
             'icon' => 'cogs',
@@ -287,7 +287,13 @@ class WesanoxHelperFields extends WireData implements Module
      */
     private function createDynamicOptionField($f, array $field_array): void
     {
-        $f->inputflied_class = $field_array['inputfield_class'];
+        if ( is_array($field_array['inputfield_class'] ) ) {
+            foreach ( $field_array['inputfield_class'] AS $inputfield_class ) {
+                $f->inputfield_class = $inputfield_class;
+            }
+        } else {
+            $f->inputfield_class =$field_array['inputfield_class'];
+        }
     }
 
     /**
