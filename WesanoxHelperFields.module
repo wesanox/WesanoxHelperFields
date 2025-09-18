@@ -196,6 +196,10 @@ class WesanoxHelperFields extends WireData implements Module
                 $this->createGeneralField($f, $field_array);
             }
 
+            if ($field_array['type'] === 'Integer') {
+                $this->createIntegerField($f, $field_array);
+            }
+
             if ($field_array['type'] === 'Options') {
                 $this->createOptionField($f, $field_array);
             }
@@ -272,8 +276,29 @@ class WesanoxHelperFields extends WireData implements Module
      *
      * @return void
      */
+    private function createIntegerField($f, array $field_array): void
+    {
+        $f->zeroNotEmpty = $field_array['zeroNotEmpty'];
+        $f->defaultValue = $field_array['defaultValue'];
+        $f->inputType = $field_array['inputType'];
+        $f->size = $field_array['size'];
+        $f->min = $field_array['min'];
+        $f->max = $field_array['max'];
+    }
+
+    /**
+     * @param $f
+     * @param array $field_array
+     *
+     * @return void
+     */
     private function createOptionField($f, array $field_array): void
     {
+        if(isset($field_array['defaultValue'])) {
+            $f->defaultValue = $field_array['defaultValue'];
+            $f->required = $field_array['required'];
+        }
+
         $manager = new SelectableOptionManager();
         $options = $field_array['options'];
         $manager->setOptionsString($f, $options, false);
@@ -392,20 +417,36 @@ class WesanoxHelperFields extends WireData implements Module
     {
         $matrix_field_ids = [];
         $i = 1;
+        $context_map = [];
 
-        foreach( $field_array['fields'] as $field_name ) {
-            $matrix_field_ids[] = $this->fields->get($field_name)->id;
+        foreach ($field_array['fields'] as $field_name) {
+            $field = $this->fields->get($field_name);
+            if ($field) $matrix_field_ids[] = $field->id;
         }
 
         $f->addType = 1;
         $f->repeaterFields = $matrix_field_ids;
 
-        foreach( $field_array['matrix_items'] as $matrix_item ) {
+        foreach ($field_array['matrix_items'] as $matrix_item) {
             $matrix_item_field_ids = [];
 
+            foreach ($matrix_item['fields'] as $key => $val) {
+                if (is_int($key)) {
+                    $field_name   = $val;
+                    $context_data = null;
+                } else {
+                    $field_name   = $key;
+                    $context_data = is_array($val) ? $val : null;
+                }
 
-            foreach( $matrix_item['fields'] as $field_items ) {
-                $matrix_item_field_ids[] = $this->fields->get($field_items)->id;
+                $field = $this->fields->get($field_name);
+                if (!$field) continue;
+
+                $matrix_item_field_ids[] = $field->id;
+
+                if ($context_data) {
+                    $context_map[$field_name] = array_merge($context_map[$field_name] ?? [], $context_data);
+                }
             }
 
             $f->setArray([
@@ -421,7 +462,32 @@ class WesanoxHelperFields extends WireData implements Module
 
         $f->save();
 
-        $this->setMatrixTemplateFields($field_array);
+        $repeater = $this->fields->get($field_array['name']);
+        $repeater_template = $repeater->type->getMatrixTemplate($repeater);
+
+        foreach ($field_array['fields'] as $field_name) {
+            $repeater_template->fieldgroup->add($field_name);
+        }
+
+        $repeater_template->fieldgroup->save();
+        $repeater_template->save();
+        $repeater->save();
+
+        if (!empty($context_map)) {
+            foreach ($context_map as $field_name => $context_data) {
+                $field = $this->fields->get($field_name);
+                if (!$field) continue;
+
+                $field_in_context = $field->getContext($repeater_template);
+                foreach ($context_data as $_key => $_val) {
+                    $field_in_context->set($_key, $_val);
+                }
+
+                if ($fieldgroup = $field_in_context->_contextFieldgroup) {
+                    $this->wire->fields->saveFieldgroupContext($field_in_context, $fieldgroup);
+                }
+            }
+        }
     }
 
     /**
