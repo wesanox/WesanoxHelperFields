@@ -192,7 +192,14 @@ class WesanoxHelperFields extends WireData implements Module
 
             $f = $this->fields->get($field_array['name']);
 
-            if ($field_array['type'] === 'Text' || $field_array['type'] === 'Textarea' || $field_array['type'] === 'Checkbox') {
+            if (
+                $field_array['type'] === 'Text' ||
+                $field_array['type'] === 'Textarea' ||
+                $field_array['type'] === 'Checkbox' ||
+                $field_array['type'] === 'FieldsetOpen' ||
+                $field_array['type'] === 'FieldsetTabOpen' ||
+                $field_array['type'] === 'FieldsetClose'
+            ) {
                 $this->createGeneralField($f, $field_array);
             }
 
@@ -254,7 +261,8 @@ class WesanoxHelperFields extends WireData implements Module
         $f->icon = $field_array['icon'] ?? null;
         $f->columnWidth = $field_array['width'] ?? 100;
         $f->placeholder = $field_array['placeholder'] ?? '';
-        $f->collapsed = $field_array['collapsed'] ?? 1;
+
+        if(isset($field_array['collapsed'])) $f->collapsed = $field_array['collapsed'];
 
         $f->save();
     }
@@ -382,6 +390,10 @@ class WesanoxHelperFields extends WireData implements Module
 
         $f->addType = 1;
         $f->repeaterFields = $fields_repeater;
+
+        if (isset($field_array['depth'])) $f->repeaterDepth = $field_array['depth'];
+        if (isset($field_array['repeaterTitle'])) $f->repeaterTitle = $field_array['repeaterTitle'];
+        if (isset($field_array['loading'])) $f->repeaterLoading = $field_array['loading'];
 
         $f->save();
 
