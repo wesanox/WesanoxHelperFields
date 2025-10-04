@@ -9,7 +9,7 @@ class WesanoxHelperFields extends WireData implements Module
         return array(
             'title' => 'wesanox Helper Fields',
             'summary' => 'A helper module to create simple at fast field inside of other modules, templates or matrix items.',
-            'version' => '0.1.2',
+            'version' => '0.1.3',
             'author' => 'Frittenfritze',
             'href' => 'https://wesanox.de',
             'icon' => 'cogs',
