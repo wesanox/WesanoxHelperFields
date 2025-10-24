@@ -227,6 +227,10 @@ class WesanoxHelperFields extends WireData implements Module
                 $this->createFileField($f, $field_array);
             }
 
+            if($field_array['type'] === 'Datetime') {
+                $this->createDateField($f, $field_array);
+            }
+
             $f->save();
 
             /**
@@ -275,8 +279,21 @@ class WesanoxHelperFields extends WireData implements Module
      */
     private function createGeneralField($f, array $field_array): void
     {
-        if( $field_array['formatter'] !== null ) $f->textformatters = [ 0 => $field_array['formatter']];
-        if( $field_array['inputfieldClass'] !== null ) $f->inputfieldClass = $field_array['inputfieldClass'];
+        if( isset($field_array['formatter']) ) if( $field_array['formatter'] !== null ) $f->textformatters = [ 0 => $field_array['formatter']];
+        if( isset($field_array['inputfieldClass']) ) if ( $field_array['inputfieldClass'] !== null ) $f->inputfieldClass = $field_array['inputfieldClass'];
+    }
+
+    /**
+     * @param $f
+     * @param array $field_array
+     *
+     * @return void
+     */
+    private function createDateField($f, array $field_array): void
+    {
+        if( $field_array['dateOutputFormat'] !== null ) $f->dateOutputFormat = $field_array['dateOutputFormat'];
+        if( $field_array['dateInputFormat'] !== null ) $f->dateInputFormat = $field_array['dateInputFormat'];
+        if( $field_array['defaultToday'] !== null ) $f->dateFormat = $field_array['defaultToday'];
     }
 
     /**
