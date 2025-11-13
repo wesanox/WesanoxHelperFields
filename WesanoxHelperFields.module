@@ -293,7 +293,8 @@ class WesanoxHelperFields extends WireData implements Module
     {
         if( $field_array['dateOutputFormat'] !== null ) $f->dateOutputFormat = $field_array['dateOutputFormat'];
         if( $field_array['dateInputFormat'] !== null ) $f->dateInputFormat = $field_array['dateInputFormat'];
-        if( $field_array['defaultToday'] !== null ) $f->dateFormat = $field_array['defaultToday'];
+        if( $field_array['defaultToday'] !== null ) $f->defaultToday = $field_array['defaultToday'];
+        if( $field_array['datepicker'] !== null ) $f->datepicker = $field_array['datepicker'];
     }
 
     /**
@@ -304,12 +305,12 @@ class WesanoxHelperFields extends WireData implements Module
      */
     private function createIntegerField($f, array $field_array): void
     {
-        $f->zeroNotEmpty = $field_array['zeroNotEmpty'];
-        $f->defaultValue = $field_array['defaultValue'];
-        $f->inputType = $field_array['inputType'];
-        $f->size = $field_array['size'];
-        $f->min = $field_array['min'];
-        $f->max = $field_array['max'];
+        if( $field_array['zeroNotEmpty'] !== null ) $f->zeroNotEmpty = $field_array['zeroNotEmpty'];
+        if( $field_array['defaultValue'] !== null ) $f->defaultValue = $field_array['defaultValue'];
+        if( $field_array['inputType'] !== null ) $f->inputType = $field_array['inputType'];
+        if( isset($field_array['size']) ) $f->size = $field_array['size'];
+        if( isset($field_array['min']) ) $f->min = $field_array['min'];
+        if( isset($field_array['max']) ) $f->max = $field_array['max'];
     }
 
     /**
@@ -325,6 +326,7 @@ class WesanoxHelperFields extends WireData implements Module
             $f->required = $field_array['required'];
         }
 
+        $f->inputfieldClass = $field_array['inputfieldClass'] ?? null;
         $manager = new SelectableOptionManager();
         $options = $field_array['options'];
         $manager->setOptionsString($f, $options, false);
