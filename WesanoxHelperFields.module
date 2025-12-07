@@ -9,7 +9,7 @@ class WesanoxHelperFields extends WireData implements Module
         return array(
             'title' => 'wesanox Helper Fields',
             'summary' => 'A helper module to create simple at fast field inside of other modules, templates or matrix items.',
-            'version' => '0.1.3',
+            'version' => '0.1.4',
             'author' => 'Frittenfritze',
             'href' => 'https://wesanox.de',
             'icon' => 'cogs',
@@ -389,7 +389,7 @@ class WesanoxHelperFields extends WireData implements Module
             $f->setArray([
                 "matrix{$i}_name"   => $matrix_item['name'],
                 "matrix{$i}_label"  => $matrix_item['label'],
-                "matrix{$i}_head"   => '{matrix_label} [• {matrix_summary}]',
+                "matrix{$i}_head"   => '{matrix_label} [• {text_label}]',
                 "matrix{$i}_fields" => $matrix_item_field_ids,
                 "matrix{$i}_sort"   => $i,
             ]);
