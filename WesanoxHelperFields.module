@@ -81,102 +81,6 @@ class WesanoxHelperFields extends WireData implements Module
     }
 
     /**
-     * Delete an item in a Matrix Field
-     *
-     * @param array $fields_array
-     * @param string $matrix
-     * @param array $type_names
-     *
-     * @return void
-     */
-    private function deleteMatrixTypes(array $fields_array, string $matrix, array $type_names): void
-    {
-        if( $matrix != '') {
-            $f = $this->fields->get($matrix);
-
-            if(!$f) return;
-
-            $matrix_template = $f->type->getMatrixTemplate($f);
-
-            $drop_fields = [];
-            $drop_field_ids = [];
-            $keys_delete = [];
-            $remaining_ids = [];
-
-            $changed = false;
-            $changed_fieldgroup = false;
-
-            foreach ($fields_array as $content_field) {
-                $cf = $this->fields->get($content_field['name']);
-
-                if($cf) {
-                    $drop_fields[$cf->name] = $cf;
-                    $drop_field_ids[] = $cf->id;
-                }
-            }
-
-            foreach($f->data as $key => $data) {
-                if (preg_match('/^matrix(\d+)_name$/', $key, $m) && in_array($data, $type_names, true)) {
-                    $keys_delete[] = $m[1];
-                }
-            }
-
-            if(!$keys_delete) return;
-
-            foreach ($keys_delete as $key) {
-                foreach ($this->suffixes as $suffix) {
-                    $f->remove("matrix{$key}" . $suffix);
-                }
-            }
-
-            $this->fields->save($f);
-
-            foreach ($f->data as $key => $data) {
-                if (preg_match('/^matrix\d+_fields$/', $key) && is_array($data)) {
-                    $new = array_values(array_diff($data, $drop_field_ids));
-
-                    if ($new !== $data) {
-                        $f->set($key, $new);
-                        $changed = true;
-                    }
-                }
-            }
-
-            if ($changed) $this->fields->save($f);
-
-            if (is_array($f->repeaterFields) && $drop_field_ids) {
-                $new_repeater_field = array_values(array_diff($f->repeaterFields, $drop_field_ids));
-
-                if ($new_repeater_field !== $f->repeaterFields) {
-                    $f->repeaterFields = $new_repeater_field;
-
-                    $this->fields->save($f);
-                }
-            }
-
-            foreach ($f->data as $key => $data) {
-                if (preg_match('/^matrix\d+_fields$/', $key) && is_array($data)) {
-                    foreach ($data as $id) $remaining_ids[$id] = true;
-                }
-            }
-
-            foreach ($drop_fields as $fld) {
-                $id = $fld->id;
-
-                if (!isset($remaining_ids[$id])) {
-                    $matrix_template->fieldgroup->remove($fld);
-                    $changed_fieldgroup = true;
-                }
-            }
-
-            if ($changed_fieldgroup) {
-                $matrix_template->fieldgroup->save();
-                $matrix_template->save();
-            }
-        }
-    }
-
-    /**
      * @param array $field_array
      *
      * @return void
@@ -243,7 +147,6 @@ class WesanoxHelperFields extends WireData implements Module
             if( $field_array['type'] === 'RepeaterMatrix' ) {
                 $this->createMatrixField($f, $field_array);
             }
-
         }
     }
 
@@ -413,6 +316,7 @@ class WesanoxHelperFields extends WireData implements Module
         if (isset($field_array['depth'])) $f->repeaterDepth = $field_array['depth'];
         if (isset($field_array['repeaterTitle'])) $f->repeaterTitle = $field_array['repeaterTitle'];
         if (isset($field_array['loading'])) $f->repeaterLoading = $field_array['loading'];
+        if (isset($field_array['rememberOpen'])) $f->rememberOpen = $field_array['rememberOpen'];
 
         $f->save();
 
@@ -456,6 +360,7 @@ class WesanoxHelperFields extends WireData implements Module
             if ($field) $matrix_field_ids[] = $field->id;
         }
 
+        if (isset($field_array['rememberOpen'])) $f->rememberOpen = $field_array['rememberOpen'];
         $f->addType = 1;
         $f->repeaterFields = $matrix_field_ids;
 
@@ -542,5 +447,101 @@ class WesanoxHelperFields extends WireData implements Module
         $repeater_template->save();
 
         $repeater->save();
+    }
+
+    /**
+     * Delete an item in a Matrix Field
+     *
+     * @param array $fields_array
+     * @param string $matrix
+     * @param array $type_names
+     *
+     * @return void
+     */
+    private function deleteMatrixTypes(array $fields_array, string $matrix, array $type_names): void
+    {
+        if( $matrix != '') {
+            $f = $this->fields->get($matrix);
+
+            if(!$f) return;
+
+            $matrix_template = $f->type->getMatrixTemplate($f);
+
+            $drop_fields = [];
+            $drop_field_ids = [];
+            $keys_delete = [];
+            $remaining_ids = [];
+
+            $changed = false;
+            $changed_fieldgroup = false;
+
+            foreach ($fields_array as $content_field) {
+                $cf = $this->fields->get($content_field['name']);
+
+                if($cf) {
+                    $drop_fields[$cf->name] = $cf;
+                    $drop_field_ids[] = $cf->id;
+                }
+            }
+
+            foreach($f->data as $key => $data) {
+                if (preg_match('/^matrix(\d+)_name$/', $key, $m) && in_array($data, $type_names, true)) {
+                    $keys_delete[] = $m[1];
+                }
+            }
+
+            if(!$keys_delete) return;
+
+            foreach ($keys_delete as $key) {
+                foreach ($this->suffixes as $suffix) {
+                    $f->remove("matrix{$key}" . $suffix);
+                }
+            }
+
+            $this->fields->save($f);
+
+            foreach ($f->data as $key => $data) {
+                if (preg_match('/^matrix\d+_fields$/', $key) && is_array($data)) {
+                    $new = array_values(array_diff($data, $drop_field_ids));
+
+                    if ($new !== $data) {
+                        $f->set($key, $new);
+                        $changed = true;
+                    }
+                }
+            }
+
+            if ($changed) $this->fields->save($f);
+
+            if (is_array($f->repeaterFields) && $drop_field_ids) {
+                $new_repeater_field = array_values(array_diff($f->repeaterFields, $drop_field_ids));
+
+                if ($new_repeater_field !== $f->repeaterFields) {
+                    $f->repeaterFields = $new_repeater_field;
+
+                    $this->fields->save($f);
+                }
+            }
+
+            foreach ($f->data as $key => $data) {
+                if (preg_match('/^matrix\d+_fields$/', $key) && is_array($data)) {
+                    foreach ($data as $id) $remaining_ids[$id] = true;
+                }
+            }
+
+            foreach ($drop_fields as $fld) {
+                $id = $fld->id;
+
+                if (!isset($remaining_ids[$id])) {
+                    $matrix_template->fieldgroup->remove($fld);
+                    $changed_fieldgroup = true;
+                }
+            }
+
+            if ($changed_fieldgroup) {
+                $matrix_template->fieldgroup->save();
+                $matrix_template->save();
+            }
+        }
     }
 }
