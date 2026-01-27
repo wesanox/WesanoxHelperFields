@@ -102,7 +102,8 @@ class WesanoxHelperFields extends WireData implements Module
                 $field_array['type'] === 'Checkbox' ||
                 $field_array['type'] === 'FieldsetOpen' ||
                 $field_array['type'] === 'FieldsetTabOpen' ||
-                $field_array['type'] === 'FieldsetClose'
+                $field_array['type'] === 'FieldsetClose' ||
+                $field_array['type'] === 'MapMarker'
             ) {
                 $this->createGeneralField($f, $field_array);
             }
